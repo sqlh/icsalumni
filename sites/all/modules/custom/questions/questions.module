@@ -1,22 +1,322 @@
 <?php
 
-/*
- * Implements hook_menu().
- */
-function questions_menu(){ 
-  $items['questions'] = array(
-    'title' => 'Questions page',
-    'description' => 'Shows list of survey questions.',
-    'page callback' => 'questions_function',
-    'access arguments' => array('access questions'),
-    'type' => MENU_CALLBACK,
-  );  
+
+/**
+* Implements hook_menu().
+*/
+function questions_menu() {
+	
+	$items['questions'] = array(
+    'title' => 'Questions',
+    'description' => 'Simple custom hook_menu() implementation.',
+    'page callback' => 'questions_list',
+    'access arguments' => array('access content'),
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_TASK,
+  ); 
+
+	$items['add_question'] = array(
+    'title' => 'Add Question',
+    'description' => 'Add a question.',
+    'access arguments' => array('add question'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('questions_form'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+	$items['questions/%ctools_js'] = array(
+		'page callback' => 'questions_callback',
+		'page arguments' => array(1),
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
   return $items;
+
 }
- 
+
+function questions_init() {
+    //Customize modal window
+    drupal_add_js(array(
+    'add-answer-modal' => array(
+      'modalSize' => array(
+        'type' => 'fixed',
+        'width' => 500,
+        'height' => 500,
+      ),
+     //Animation mode
+     'animation' => 'fadeIn',
+    ),
+  ), 'setting');
+}
+
+
 /*
  * Callback function.
  */
 function questions_function(){
 	return "QUESTIONS";
 }
+
+/**
+ * Implements hook_permission().
+ */
+function question_permission(){
+  return array(
+    'access questions' => array(
+      'title' => t('Access Questions Page.'),
+      'description' => t('Access Questions Page on the site.'),
+    ),
+    'add question' => array(
+      'title' => t('Add a Question.'),
+      'description' => t('Add a new question in the Questions Page.'),
+    ),
+  );
+}
+
+/**
+ *  Question form.
+ */
+function questions_form($form, $form_state){
+  $form = array();
+ 
+
+  $form['question'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Question'),
+    '#description' => t('Enter the question.'),
+   // '#default_value' => $node->title,
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+
+  $form['category'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Category'),
+    '#description' => t('Enter a category for the question.'),
+    '#size' => 60,
+    '#maxlength' => 60,
+    '#required' => TRUE,
+  );
+
+  $form['select'] = array(
+    '#type' => 'radios',
+    '#title' => t('Number of allowed answers.'),
+    '#options' => array(0 => t('Single'), 1 => t('Multiple')),
+   // '#description' => t('Number of allowed answers.'),
+    '#default_value' => 0,
+  );
+
+  $form['choices'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Choices'),
+    '#description' => t('Enter choices.'),
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add question'),
+  );  
+
+  return $form;
+}
+
+/**
+ * Submit handler for question_form. Inserts entry into the database.
+ */
+function questions_form_submit($form, $form_state){
+  global $user;
+   
+  $query = db_insert('questions')
+    ->fields(array(
+      'text' => $form_state['values']['question'],
+      'category' => $form_state['values']['category'],
+      //'select' => 3,
+      'uid_created' => $user->uid,
+      'date_created' => date(time()),
+    ))
+    ->execute();
+
+  $qid = db_query("SELECT qid FROM {questions} WHERE text = :text", 
+    array(':text' => $form_state['values']['question']))->fetchField();
+
+  $choices = explode(',', $form_state['values']['choices']);
+  foreach ($choices as $choice) {
+    $query = db_merge('answers')
+      ->key(array('text' => trim($choice)))
+      ->execute();
+    
+    $aid = db_query("SELECT aid FROM {answers} WHERE text = :text", 
+    array(':text' => trim($choice)))->fetchField();
+    
+    $query = db_insert('questions_answers')
+    ->fields(array(
+      'qid' => $qid,
+      'aid' => $aid
+    ))
+    ->execute();
+  }
+  
+  drupal_set_message(t('Question has been successfully added.'));
+  // Tell the browser to close the modal.
+ // $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+}
+
+/**
+ *  Add answer form.
+ */
+function questions_add_answer_form($form, $form_state){
+  $form = array();
+  $form_state['values']['text'] = "PLSHUHU";
+  $form['some_text'] = array(
+    '#markup' => $form_state['values']['text'],
+    '#value' => 'wat',
+  );
+  
+  $form['text'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Add Answer'),
+    '#description' => t('Add Answer.'),
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add Answer'),
+  );  
+
+  return $form;
+}
+
+
+function questions_add_answer_form_submit($form, $form_state){
+  global $user;
+
+  drupal_set_message(t('Answer has been successfully added.'));
+  // Tell the browser to close the modal.
+ // $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+}
+
+
+function questions_list() {
+  global $user;
+  ctools_include('modal');
+  ctools_modal_add_js();
+  
+  $header = array(
+    'id' => array('data' => t('Id'), 'field' => 'q.qid'),
+    'text' => array('data' => t('Question'), 'field' => 'q.text'),
+    'category' => array('data' => t('Category'), 'field' => 'q.category'),
+    'date_created' => array('data' => t('Date created'), 'field' => 'q.date_created'),
+    'operations' => array('data' => t('Operations'), 'colspan' => 3),
+  );
+
+  // Setting the sort conditions
+    if(isset($_GET['sort']) && isset($_GET['order'])) {
+      // Sort it Ascending or Descending?
+      if($_GET['sort'] == 'asc')
+        $sort = 'ASC';
+      else
+        $sort = 'DESC';
+   
+      // Which column will be sorted
+      switch($_GET['order']) {
+        case 'Category':
+          $order = 'category';
+          break;
+        case 'Text':
+          $order = 'text';
+          break;
+        default:
+          $order = 'category';
+      }
+    }
+    else {
+      $sort = 'ASC';
+      $order = 'category';
+    }
+
+  $query = db_select('questions', 'q')
+              ->extend('PagerDefault')
+              ->extend('TableSort');
+
+  $query->fields('q', array('qid', 'text', 'category', 'date_created'))
+        ->limit(20)
+        ->orderByHeader($header)
+        ->orderBy($order, $sort);
+  $results = $query->execute();
+
+  $rows = array();
+  foreach ($results as $result) {
+    $rows[$result->qid] = array(
+      $result->qid,
+      $result->text,
+      $result->category,
+      format_date($result->date_created),
+      l("Add Answer", 'questions/nojs/', array(
+        'attributes' => array(
+          'class' => array(
+            'ctools-use-modal', 'ctools-modal-add-answer-modal')
+          ),
+        )
+      )
+   //  l("Add Answer", 'add_answer'), 
+    );
+
+    if(isset($user->roles[2])){
+      array_push($rows[$result->qid], l('Edit', 'questions/'.$result->qid));
+      array_push($rows[$result->qid], l('Delete', 'questions/'.$result->qid));
+    }
+  }
+
+  $output = theme('table', array('header' => $header, 'rows' => $rows ));
+  
+  $output .= theme('pager');
+  $output .= l('Add Question', 'add_question');
+
+  if(isset($user->roles[2])){
+    $output .= 'HI';
+  }
+  return $output;
+}
+
+/**
+* Ajax menu callback.
+*/
+function questions_callback($ajax) {
+	if ($ajax) {
+		ctools_include('ajax');
+		ctools_include('modal');
+
+		$form_state = array(
+		'ajax' => TRUE,
+		'title' => t('MyModule Modal Form'),
+		);
+
+		// Use ctools to generate ajax instructions for the browser to create
+		// a form in a modal popup.
+		$output = ctools_modal_form_wrapper('questions_add_answer_form', $form_state);
+
+		// If the form has been submitted, there may be additional instructions
+		// such as dismissing the modal popup.
+		if (!empty($form_state['ajax_commands'])) {
+			$output = $form_state['ajax_commands'];
+		}
+
+		// Return the ajax instructions to the browser via ajax_render().
+		print ajax_render($output);
+		drupal_exit();
+	}
+	else {
+		return drupal_get_form('questions_add_answer_form');
+	}
+}
+
+
+
+
