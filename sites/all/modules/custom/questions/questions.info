@@ -2,5 +2,4 @@ name = Questions Page
 description = Add and edit survey questions.
 package = Questions
 core = 7.x
-files[] = questions.module
 dependencies[] = ctools
