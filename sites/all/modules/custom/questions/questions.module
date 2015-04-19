@@ -1,0 +1,22 @@
+<?php
+
+/*
+ * Implements hook_menu().
+ */
+function questions_menu(){ 
+  $items['questions'] = array(
+    'title' => 'Questions page',
+    'description' => 'Shows list of survey questions.',
+    'page callback' => 'questions_function',
+    'access arguments' => array('access questions'),
+    'type' => MENU_CALLBACK,
+  );  
+  return $items;
+}
+ 
+/*
+ * Callback function.
+ */
+function questions_function(){
+	return "QUESTIONS";
+}
