@@ -59,9 +59,10 @@ function questions_schema(){
 	      'length' => '60',
 	      'not null' => TRUE,
 	    ),
-	    'select' => array(
+	    'multiple' => array(
 	      'description' => 'Whether the question allows single (0) or multiple (1) answers.',
 	      'type' => 'int',
+	      'size' => 'tiny',
 	      'not null' => TRUE,
 	      'default' => 0,
 	    ),
@@ -121,6 +122,7 @@ function questions_schema(){
 	    ),
 	  ),
 	);
+
 
 	return $schema;
 }
