@@ -139,23 +139,17 @@ function questions_form_submit($form, $form_state){
     ))
     ->execute();
 
-  $qid = db_query("SELECT qid FROM {questions} WHERE text = :text", 
-    array(':text' => $form_state['values']['question']))->fetchField();
-
+  $qid = db_query("SELECT qid FROM {questions} WHERE text = :text", array(':text' => $form_state['values']['question']))->fetchField();
   $choices = explode(',', $form_state['values']['choices']);
+
   foreach ($choices as $choice) {
     $query = db_merge('answers')
       ->key(array('text' => trim($choice)))
       ->execute();
-    
-    $aid = db_query("SELECT aid FROM {answers} WHERE text = :text",
-      array(':text' => trim($choice)))->fetchField();
-      
+
+    $aid = db_query("SELECT aid FROM {answers} WHERE text = :text", array(':text' => trim($choice)))->fetchField(); 
     $query = db_insert('questions_answers')
-      ->fields(array(
-        'qid' => $qid,
-        'aid' => $aid
-      ))
+      ->fields(array('qid' => $qid, 'aid' => $aid))
       ->execute();
   }
   
@@ -168,28 +162,37 @@ function questions_form_submit($form, $form_state){
  *  Add answer form.
  */
 function questions_add_answer_form($form, &$form_state){
-  $form = array();
- // $form_state['values']['text'] = "PLSHUHU";
+  $question = db_query("SELECT * FROM {questions} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
+
   $form['some_text'] = array(
-	  '#markup' => $form_state['qid'],
+	  '#title' => t('Question'),
+    '#markup' => $question->text,
     '#value' => 'wat',
   );
-  
-  $form['text'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Add Answer'),
-    '#description' => t('Add Answer.'),
-    '#size' => 60,
-    '#maxlength' => 255,
-    '#required' => TRUE,
+
+  $results = db_query("SELECT aid FROM {questions_answers} WHERE qid = :qid", array(':qid' => $form_state['qid'])); 
+  $options = array();
+  foreach ($results as $result) {
+    $text = db_query("SELECT text FROM {answers} WHERE aid = :aid", array(':aid' => $result->aid))->fetchField();
+    $options[$result->aid] = $text;
+  }
+//  drupal_map_assoc($options);
+
+  $form['answer'] = array(
+    '#type' => 'select',
+    '#title' => t('Select your answer.'),
+    //'#description' => t('Select your preferred '),
+    '#options' => $options,
+    '#width' => 10,
+    '#multiple' => $question->multiple
   );
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Add Answer'),
+    '#value' => t('Submit'),
   );
 	
-	if ( $form_state['submitted']){
+	if ($form_state['submitted']) {
 	 // $commands[] = ctools_modal_command_dismiss();
 	  $commands[] = ctools_ajax_command_redirect('questions');
 	  print ajax_render($commands);
@@ -199,23 +202,25 @@ function questions_add_answer_form($form, &$form_state){
   return $form;
 }
 
-
 function questions_add_answer_form_submit(&$form, &$form_state){
-  // 2 col: questions_answers & users OR 3 col: questions, answers & users????
-/*
-  $query = db_insert('questions_answers_users')
+  global $user;
+  $answers = array();
+
+  is_array($form_state['values']['answer']) ? $answers = array_filter($form_state['values']['answer']) : array_push($answers, $form_state['values']['answer']);
+  
+  foreach ($answers as $answer) {
+    $query = db_insert('questions_answers_users')
     ->fields(array(
-      'text' => $form_state['values']['question'],
-      'category' => $form_state['values']['category'],
-      //'select' => 3,
-      'uid_created' => $user->uid,
-      'date_created' => date(time()),
+      'qid' => $form_state['qid'],
+      'aid' => $answer,
+      'uid' => $user->uid,
+      'date_added' => date(time())
     ))
     ->execute();
-*/
+  }
+
   $form_state['rebuild'] = TRUE;
 }
-
 
 function questions_list() {
   global $user;
@@ -230,33 +235,32 @@ function questions_list() {
     'operations' => array('data' => t('Operations'), 'colspan' => 3),
   );
 
-  // Setting the sort conditions
-    if (isset($_GET['sort']) && isset($_GET['order'])) {
-      // Sort it Ascending or Descending?
-      if($_GET['sort'] == 'asc')  $sort = 'ASC';
-      else                        $sort = 'DESC';
-   
-      // Which column will be sorted
-      switch($_GET['order']) {
-        case 'Category':
-          $order = 'category';
-          break;
-        case 'Text':
-          $order = 'text';
-          break;
-        default:
-          $order = 'category';
-      }
+// Setting the sort conditions
+  if (isset($_GET['sort']) && isset($_GET['order'])) {
+    // Sort it Ascending or Descending?
+    if($_GET['sort'] == 'asc')  $sort = 'ASC';
+    else                        $sort = 'DESC';
+ 
+    // Which column will be sorted
+    switch($_GET['order']) {
+      case 'Category':
+        $order = 'category';
+        break;
+      case 'Text':
+        $order = 'text';
+        break;
+      default:
+        $order = 'category';
     }
-    else {
-      $sort = 'ASC';
-      $order = 'category';
-    }
+  }
+  else {
+    $sort = 'ASC';
+    $order = 'category';
+  }
 
   $query = db_select('questions', 'q')
     ->extend('PagerDefault')
     ->extend('TableSort');
-
 
   $query->fields('q', array('qid', 'text', 'category', 'date_created'))
         ->limit(20)
@@ -286,8 +290,7 @@ function questions_list() {
     }
   }
 
-  $output = theme('table', array('header' => $header, 'rows' => $rows ));
-  
+  $output = theme('table', array('header' => $header, 'rows' => $rows ));  
   $output .= theme('pager');
   $output .= l('Add Question', 'add_question');
 
@@ -333,3 +336,9 @@ function questions_callback($ajax, $qid) {
 
 
 
+function questions_add_answer_form_alter(&$form, &$form_state, $form_id){
+  if(substr($form_id, 0, 19) == "webform_client_form"){
+    $form['#attached']['library'][] = array('chosen', 'drupal.chosen');
+    
+  }
+}
