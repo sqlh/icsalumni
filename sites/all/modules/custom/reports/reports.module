@@ -2,6 +2,8 @@
 /*
  * Implements hook_menu().
  */
+
+
 function reports_menu(){ 
   $items['reports'] = array(
     'title' => 'Reports page',
@@ -25,8 +27,19 @@ function reports_menu(){
    'access arguments' => array('access content'),
    'type' => MENU_CALLBACK,
   );
+
+   $items['reports_ajax'] = array(
+    'page callback' => 'my_module_example',
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
+
+function my_module_example () {
+  return "HI";
+}
+
  
  function ajax_link_response_graph($ajax) {
   if ($ajax) {
@@ -66,7 +79,7 @@ function _make_bar_chart(){
     ->fields('q', array('category'))
     ->condition('q.category', 'q')
     ->execute()
-    ->rowCount(); 
+    ->rowCount(); ○
 
   $data = array();
  // foreach ($results as $result) {
@@ -105,13 +118,22 @@ function _make_bar_chart(){
   
     //theme all the charts!
 //drupal_add_js(drupal_get_path('module', 'mymodule') . '/jsapi.js');
-    return theme('reports_chart_template');//, array('chart' => $chart));
+  //  drupal_add_js(array('charts.js' => array('SOMEVARIABLE' => 'woohoo')), 'setting');
+  $testVariable = rand(5, 20);
+//drupal_add_js(array('reports' => array('testvar' => $testVariable)), array('type' => 'setting'));
+  drupal_add_js(drupal_get_path('module', 'reports') . '/charts.js');
+    return theme('reports_chart_template', array('test' => $testVariable));
+}
+
+function reports_chart(){
+  return "YSSAGANDA";
 }
    
 
 function reports_function(){
     //theme all the charts!
-  drupal_add_js(drupal_get_path('module', 'mymodule') . '/jsapi.js');
+  drupal_add_js(drupal_get_path('module', 'reports') . '/jsapi.js');
+//  drupal_add_js(drupal_get_path('template', 'reports-chart-page') . '/charts.js');
   return theme('reports_template');
 } 
 /*
@@ -128,4 +150,30 @@ function reports_theme(){
       'template' => 'reports-chart-page',
     ),
   );
+}
+
+
+/*
+function reports_get_by_category_id($cat_id){
+  $items = '';
+  switch($cat_id){
+    case 12: 
+     $items = '<ul><li>Product 1</li><li>Product 2</li></ul>';
+     break;
+    case 20:
+     $items = '<ul><li>Product 3</li><li>Product 4</li></ul>';
+     break;  
+  }
+// create a JSON object. The object will contain a property named “products” that will be set with the $items variable. 
+  return drupal_json(array('products'=>$items));
+  exit;
+}
+
+*/
+function reports_init() {
+  theme('reports_javascript');
+}
+
+function theme_reports_javascript() {
+  drupal_add_js(drupal_get_path('module', 'reports') . '/charts.js');
 }
