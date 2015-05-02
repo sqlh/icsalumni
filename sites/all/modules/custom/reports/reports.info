@@ -1,6 +1,0 @@
-name = Reports Page
-description = Generate reports.
-package = Reports
-core = 7.x
-files[] = reports.module
-dependencies[] = ctools
