@@ -901,6 +901,7 @@ function user_update_7017() {
   return $message;
 }
 
+
 /**
  * Ensure there is an index on {users}.picture.
  */
@@ -909,6 +910,7 @@ function user_update_7018() {
     db_add_index('users', 'picture', array('picture'));
   }
 }
+
 
 /**
  * @} End of "addtogroup updates-7.x-extra".

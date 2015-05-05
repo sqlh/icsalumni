@@ -3,9 +3,9 @@
 /**
  * Implements hook_schema().
  */
-function questions_schema(){
+function question_schema(){
 	
-	$schema['answers'] = array(
+	$schema['answer'] = array(
 	  'description' => 'Stores answers.',
 	  'fields' => array(
 	    'aid' => array(
@@ -24,7 +24,7 @@ function questions_schema(){
 	  'primary key' => array('aid'),
 	);
 
-	$schema['questions'] = array(
+	$schema['question'] = array(
 	  'description' => 'Stores survey questions.',
 	  'fields' => array(
 	    'qid' => array(
@@ -76,17 +76,17 @@ function questions_schema(){
 	  'primary key' => array('qid'),
 	);
 
-	$schema['questions_answers'] = array(
+	$schema['question_answer'] = array(
 	  'description' => 'Stores possible answers for each questions.',
 	  'fields' => array(
 	    'qid' => array(
-	      'description' => 'Primary Key: questions.qid for questions.',
+	      'description' => 'Primary Key: question.qid for question.',
 	      'type' => 'int',
 	      'unsigned' => TRUE,
 	      'not null' => TRUE,
 	    ),
 	    'aid' => array(
-	      'description' => 'Primary Key: answers.aid for answers.',
+	      'description' => 'Primary Key: answer.aid for answer.',
 	      'type' => 'int',
 	      'unsigned' => TRUE,
 	      'not null' => TRUE,
@@ -94,17 +94,17 @@ function questions_schema(){
 	  ),
 	);
 
-	$schema['questions_answers_users'] = array(
+	$schema['question_answer_users'] = array(
 	  'description' => 'Stores questions with answers by users.',
 	  'fields' => array(
 	    'qid' => array(
-	      'description' => 'Primary Key: questions.qid for questions.',
+	      'description' => 'Primary Key: question.qid for question.',
 	      'type' => 'int',
 	      'unsigned' => TRUE,
 	      'not null' => TRUE,
 	    ),
 	    'aid' => array(
-	      'description' => 'Primary Key: answers.aid for answers.',
+	      'description' => 'Primary Key: answer.aid for answer.',
 	      'type' => 'int',
 	      'unsigned' => TRUE,
 	      'not null' => TRUE,
@@ -122,7 +122,6 @@ function questions_schema(){
 	    ),
 	  ),
 	);
-
 
 	return $schema;
 }
