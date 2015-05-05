@@ -27,8 +27,14 @@ function report_menu(){
    'type' => MENU_CALLBACK,
   );
 
-   $items['report_ajax'] = array(
-    'page callback' => 'my_module_example',
+   $items['reports/result'] = array(
+    'page callback' => '_get_data',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['reports/main_data'] = array(
+    'page callback' => '_get_main_data',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
@@ -36,14 +42,96 @@ function report_menu(){
   return $items;
 }
 
-function my_module_example () {
-  //return drupal_json(array('result' => 0));
-  //return "HI~~";
-  $values = array("a", "b", "c");
+function _get_data() {
+  $sex = $_POST['sex'];
+  //$sex = ;
 
-  $value = $_POST['from_js'];
-  drupal_json_output($value);
+  if($_POST['qid'] != "--"){
+    $results = db_select('question_answer', 'q')
+      ->fields('q')
+      ->condition('q.qid', $_POST['qid'])
+      ->execute();
+
+    $data = array();
+    array_push($data, array("Option", "Number of Users"));
+    foreach($results as $result){
+      $query = db_select('question_answer_users', 'a');
+      $query->join('users', 'u', 'u.uid = a.uid');
+      $query->join('field_data_field_sex', 's', 's.entity_id = u.uid');
+      $query->join('field_data_field_birthdate', 'b', 'b.entity_id = u.uid');
+      $query->join('field_data_field_student_number', 'n', 'n.entity_id = u.uid');
+      
+      $query->fields('a')
+            ->fields('s')
+            ->fields('b')
+            ->fields('n')
+            ->condition('a.qid', $result->qid)
+            ->condition('a.aid', $result->aid);
+
+
+      // User specification
+      if(count($sex) != 2)
+        $query->condition('s.field_sex_value', $sex[0]);
+
+      if($_POST['min_age'] != "")
+        $query->where('FLOOR(DATEDIFF(NOW(),b.field_birthdate_value)/365.25) >= :min_age', array(':min_age' => $_POST['min_age']));
+      
+      if($_POST['max_age'] != "")
+        $query->where('FLOOR(DATEDIFF(NOW(),b.field_birthdate_value)/365.25) <= :max_age', array(':max_age' => $_POST['max_age']));
+
+      if($_POST['min_batch'] != "")
+        $query->where('CAST(LEFT(n.field_student_number_value, 4) AS UNSIGNED) >= :min_batch', array(':min_batch' => $_POST['min_batch']));
+
+      if($_POST['max_batch'] != "")
+        $query->where('CAST(LEFT(n.field_student_number_value, 4) AS UNSIGNED) <= :max_batch', array(':max_batch' => $_POST['max_batch']));
+
+
+      $count = $query->execute()->rowCount();
+      $text = db_query("SELECT text FROM {answer} WHERE aid = :aid", array(':aid' => $result->aid))->fetchField();
+      array_push($data, array($text, $count));
+    }
+
+    //$age = db_query("SELECT field_birthdate_value FROM {field_data_field_birthdate} WHERE entity_id = :entity_id", array(':entity_id' => 1))->fetchField();
+
+   // $age = db_query("SELECT FLOOR(DATEDIFF(NOW(),field_birthdate_value)/365.25) AS age FROM {field_data_field_birthdate} WHERE entity_id = :entity_id", array(':entity_id' => 1))->fetchField();  
+
+  }
+
+  else{
+    //return all users in site
+  }
+
+  drupal_json_output($data);
+
+ /* And then simply use:
+
+  data.value    data.emaillist    data.message 
+  in your Javascript.*/
+  //echo json_encode($messages);
+
 }
+
+
+
+
+function _get_main_data() {
+  $category = $_POST['category'];
+  
+  $results = db_select('question', 'q')
+    ->fields('q')
+    ->condition('q.category', $category)
+    ->execute();
+
+  $data = array();
+  foreach($results as $result){
+    array_push($data, array($result->qid, $result->text));
+  }
+
+  drupal_json_output($data);
+}
+  
+ 
+
 
  function ajax_link_response_graph($ajax) {
   if ($ajax) {
@@ -138,6 +226,7 @@ function report_function(){
     //theme all the charts!
   drupal_add_js(drupal_get_path('module', 'report') . '/jsapi.js');
   drupal_add_js(drupal_get_path('module', 'report') . '/report.js');
+  drupal_add_css(drupal_get_path('module', 'report') . '/report.css');
   return theme('report_template');
 } 
 /*

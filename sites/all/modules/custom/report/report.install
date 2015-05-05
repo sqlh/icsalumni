@@ -1,0 +1,157 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function report_schema(){
+	$schema['company'] = array(
+    'description' => 'Stores company/institution details.',
+    'fields' => array(
+      'cid' => array(
+        'description' => 'Unique company id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Company/institution name.',
+        'type' => 'varchar',
+        'length' => '80',
+        'not null' => TRUE,
+      ),
+      'city' => array(
+        'description' => 'City location of the company.',
+        'type' => 'varchar',
+        'length' => '60',
+        'not null' => TRUE,
+      ),
+      'country' => array(
+        'description' => 'Country location of the company.',
+        'type' => 'varchar',
+        'length' => '60',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('cid'),
+  );
+
+  $schema['organization'] = array(
+    'description' => 'Stores list of organizations.',
+    'fields' => array(
+      'oid' => array(
+        'description' => 'Unique organization id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Organization name.',
+        'type' => 'varchar',
+        'length' => '80',
+        'not null' => TRUE,
+      ),
+      'acad' => array(
+        'description' => 'Whether it is an academic organization (1) or not (0).',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('oid'),
+  );
+
+
+  $schema['job_position'] = array(
+    'description' => 'Stores job positions.',
+    'fields' => array(
+      'pid' => array(
+        'description' => 'Unique position id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Job position name.',
+        'type' => 'varchar',
+        'length' => '60',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('pid'),
+  );
+
+  $schema['users_organization'] = array(
+    'description' => 'Maps users to organizations.',
+    'fields' => array(
+      'uid' => array(
+        'description' => 'Primary Key: users.uid for user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'oid' => array(
+        'description' => 'Primary Key: organization.oid for organization.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+  );
+
+  $schema['users_job'] = array(
+    'description' => 'Maps users to jobs.',
+    'fields' => array(
+      'uid' => array(
+        'description' => 'Primary Key: users.uid for user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'cid' => array(
+        'description' => 'Primary Key: company.cid for company.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'pid' => array(
+        'description' => 'Primary Key: position.pid for position.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'start_month' => array(
+        'description' => 'Starting month of the job.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'small',
+        'not null' => FALSE,
+      ),
+      'start_year' => array(
+        'description' => 'Starting year of the job.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'small',
+        'not null' => FALSE,
+      ),
+      'end_month' => array(
+        'description' => 'End month of the job.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'small',
+        'not null' => FALSE,
+      ),
+      'end_year' => array(
+        'description' => 'End year of the job.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'small',
+        'not null' => FALSE,
+      ),
+    ),
+  );
+
+
+	return $schema;
+}

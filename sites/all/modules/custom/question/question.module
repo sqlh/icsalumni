@@ -4,12 +4,12 @@
 /**
 * Implements hook_menu().
 */
-function questions_menu() {
+function question_menu() {
   
   $items['questions'] = array(
     'title' => 'Questions',
     'description' => 'Simple custom hook_menu() implementation.',
-    'page callback' => 'questions_list',
+    'page callback' => 'question_list',
     'access arguments' => array('access content'),
     'access callback' => TRUE,
     'type' => MENU_LOCAL_TASK,
@@ -20,19 +20,19 @@ function questions_menu() {
     'description' => 'Add a question.',
     'access arguments' => array('add question'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('questions_add_form'),
+    'page arguments' => array('question_add_form'),
     'type' => MENU_NORMAL_ITEM,
   );
   */
-  $items['questions/%ctools_js/%'] = array(
-    'page callback' => 'questions_callback',
+  $items['question/%ctools_js/%'] = array(
+    'page callback' => 'question_callback',
     'page arguments' => array(1,2),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
 
-  $items['questions/view/%ctools_js/%/%'] = array(
-    'page callback' => 'questions_view_callback',
+  $items['question/view/%ctools_js/%/%'] = array(
+    'page callback' => 'question_view_callback',
     'page arguments' => array(2,3,4),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -42,10 +42,10 @@ function questions_menu() {
 
 }
 
-function questions_init() {
+function question_init() {
     //Customize modal window
     drupal_add_js(array(
-    'questions-modal' => array(
+    'question-modal' => array(
       'modalSize' => array(
         'type' => 'fixed',
         'width' => 700,
@@ -61,7 +61,7 @@ function questions_init() {
 /*
  * Callback function.
  */
-function questions_function(){
+function question_function(){
   return "QUESTIONS";
 }
 
@@ -70,7 +70,7 @@ function questions_function(){
  */
 function question_permission(){
   return array(
-    'access questions' => array(
+    'access question' => array(
       'title' => t('Access Questions Page.'),
       'description' => t('Access Questions Page on the site.'),
     ),
@@ -84,7 +84,7 @@ function question_permission(){
 /**
  *  Question form.
  */
-function questions_add_form($form, $form_state){
+function question_add_form($form, $form_state){
   $form = array();
  
 
@@ -134,29 +134,29 @@ function questions_add_form($form, $form_state){
 /**
  * Submit handler for question_form. Inserts entry into the database.
  */
-function questions_add_form_submit($form, $form_state){
+function question_add_form_submit($form, $form_state){
   global $user;
    
-  $query = db_insert('questions')
+  $query = db_insert('question')
     ->fields(array(
       'text' => $form_state['values']['question'],
-      'category' => $form_state['values']['category'],
+      'category' => ucwords(strtolower($form_state['values']['category'])),
       'multiple' => $form_state['values']['select'],
       'uid_created' => $user->uid,
       'date_created' => date(time()),
     ))
     ->execute();
 
-  $qid = db_query("SELECT qid FROM {questions} WHERE text = :text", array(':text' => $form_state['values']['question']))->fetchField();
+  $qid = db_query("SELECT qid FROM {question} WHERE text = :text", array(':text' => $form_state['values']['question']))->fetchField();
   $choices = explode(',', $form_state['values']['choices']);
 
   foreach ($choices as $choice) {
-    $query = db_merge('answers')
+    $query = db_merge('answer')
       ->key(array('text' => trim($choice)))
       ->execute();
 
-    $aid = db_query("SELECT aid FROM {answers} WHERE text = :text", array(':text' => trim($choice)))->fetchField(); 
-    $query = db_insert('questions_answers')
+    $aid = db_query("SELECT aid FROM {answer} WHERE text = :text", array(':text' => trim($choice)))->fetchField(); 
+    $query = db_insert('question_answer')
       ->fields(array('qid' => $qid, 'aid' => $aid))
       ->execute();
   }
@@ -169,8 +169,8 @@ function questions_add_form_submit($form, $form_state){
 /**
  *  Add answer form.
  */
-function questions_add_answer_form($form, &$form_state){
- /* $question = db_query("SELECT * FROM {questions} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
+function question_add_answer_form($form, &$form_state){
+  $question = db_query("SELECT * FROM {question} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
 
   $form['some_text'] = array(
     '#title' => t('Question'),
@@ -178,10 +178,10 @@ function questions_add_answer_form($form, &$form_state){
     '#value' => 'wat',
   );
 
-  $results = db_query("SELECT aid FROM {questions_answers} WHERE qid = :qid", array(':qid' => $form_state['qid'])); 
+  $results = db_query("SELECT aid FROM {question_answer} WHERE qid = :qid", array(':qid' => $form_state['qid'])); 
   $options = array();
   foreach ($results as $result) {
-    $text = db_query("SELECT text FROM {answers} WHERE aid = :aid", array(':aid' => $result->aid))->fetchField();
+    $text = db_query("SELECT text FROM {answer} WHERE aid = :aid", array(':aid' => $result->aid))->fetchField();
     $options[$result->aid] = $text;
   }
 
@@ -201,21 +201,21 @@ function questions_add_answer_form($form, &$form_state){
   
   if ($form_state['submitted']) {
    // $commands[] = ctools_modal_command_dismiss();
-    //$commands[] = ctools_ajax_command_redirect('questions/nojs/'.$question->qid);
+    //$commands[] = ctools_ajax_command_redirect('question/nojs/'.$question->qid);
     print ajax_render($commands);
     exit;
-  }*/
+  }
   return $form;
 }
 
-function questions_add_answer_form_submit(&$form, &$form_state){
+function question_add_answer_form_submit(&$form, &$form_state){
   global $user;
   $answers = array();
 
   is_array($form_state['values']['answer']) ? $answers = array_filter($form_state['values']['answer']) : array_push($answers, $form_state['values']['answer']);
   
   foreach ($answers as $answer) {
-    $query = db_insert('questions_answers_users')
+    $query = db_insert('question_answer_users')
     ->fields(array(
       'qid' => $form_state['qid'],
       'aid' => $answer,
@@ -228,9 +228,9 @@ function questions_add_answer_form_submit(&$form, &$form_state){
   $form_state['rebuild'] = TRUE;
 }
 
-function questions_view_form($form, &$form_state){
+function question_view_form($form, &$form_state){
   dpm($form_state['qid']);
-  $question = db_query("SELECT * FROM {questions} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
+  $question = db_query("SELECT * FROM {question} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
  // $attribute = '';
   $required = TRUE;
   $select_default = $question->multiple;
@@ -286,11 +286,11 @@ function questions_view_form($form, &$form_state){
     '#attributes' => array($select_att => ''),
   );
 
-  //select * from answers, questions_answers where 
+  //select * from answers, question_answers where 
 
 //  $question = db_query("SELECT * FROM {answers} WHERE qid = :qid", array(':qid' => $form_state['qid']))->fetchObject();
-  $query = db_select('answers', 'a');
-  $query->join('questions_answers', 'q', 'q.aid = a.aid');
+  $query = db_select('answer', 'a');
+  $query->join('question_answer', 'q', 'q.aid = a.aid');
   $results = $query
     ->fields('a', array('text'))
     ->condition('q.qid', $question->qid)
@@ -327,22 +327,15 @@ function questions_view_form($form, &$form_state){
 */
   
   $form['link'] = array(
-  '#markup' => l($link_text, 'questions/view/nojs/'.$form_state['operation'].'/'.$question->qid, array(
+  '#markup' => l($link_text, 'question/view/nojs/'.$form_state['operation'].'/'.$question->qid, array(
       'attributes' => array(
         'class' => array(
-          'ctools-use-modal', 'ctools-modal-questions-modal')
+          'ctools-use-modal', 'ctools-modal-question-modal')
         ),
       )
     )
   );
-/*
-  if ($form_state['submitted']) {
-   // $commands[] = ctools_modal_command_dismiss();
-    $commands[] = ctools_ajax_command_redirect('questions');
-    print ajax_render($commands);
-    exit;
-  }
-*/
+
   if ($form_state['submitted']) {
    // $commands[] = ctools_modal_command_dismiss();
     $form['actions']['submit']['#disabled'] = TRUE;
@@ -354,10 +347,10 @@ function questions_view_form($form, &$form_state){
   return $form;
 }
 
-function questions_view_form_submit(&$form, &$form_state){
+function question_view_form_submit(&$form, &$form_state){
   global $user;
 
-  db_merge('questions')
+  db_merge('question')
     ->insertFields(array(
       'text' => $form_state['values']['question'],
       'category' => $form_state['values']['category'],
@@ -375,35 +368,36 @@ function questions_view_form_submit(&$form, &$form_state){
     ->key(array('qid' => $form_state['qid']))
     ->execute();
 
-  $qid = db_query("SELECT qid FROM {questions} WHERE text = :text", array(':text' => $form_state['values']['question']))->fetchField();
+  $qid = db_query("SELECT qid FROM {question} WHERE text = :text", array(':text' => $form_state['values']['question']))->fetchField();
   $choices = explode(',', $form_state['values']['choices']);
 
   foreach ($choices as $choice) {
-    db_merge('answers')
+    db_merge('answer')
       ->key(array('text' => trim($choice)))
       ->execute();
 
-    db_delete('questions_answers')
+    /*db_delete('question_answer')
       ->condition('qid', $qid)
       ->execute();
-
-    $aid = db_query("SELECT aid FROM {answers} WHERE text = :text", array(':text' => trim($choice)))->fetchField(); 
-    $query = db_insert('questions_answers')
+*/
+    $aid = db_query("SELECT aid FROM {answer} WHERE text = :text", array(':text' => trim($choice)))->fetchField(); 
+    $query = db_insert('question_answer')
       ->fields(array('qid' => $qid, 'aid' => $aid))
       ->execute();
   }
-    
+
   drupal_set_message(t('Question has been successfully added.'));
   $form_state['rebuild'] = TRUE;  
 }
+
 /*
-function questions_form_alter(&$form, $form_state, $form_id) {
+function question_form_alter(&$form, $form_state, $form_id) {
   dpm($form_id);
-  // if ($form_id == "questions_view_form") {
-      $form['actions']['submit']['#submit'][] = 'questions_view_form_submit';  // }
+  // if ($form_id == "question_view_form") {
+      $form['actions']['submit']['#submit'][] = 'question_view_form_submit';  // }
 }
 */
-function questions_list() {
+function question_list() {
   global $user;
   ctools_include('modal');
   ctools_modal_add_js();
@@ -439,7 +433,7 @@ function questions_list() {
     $order = 'category';
   }
 
-  $query = db_select('questions', 'q')
+  $query = db_select('question', 'q')
     ->extend('PagerDefault')
     ->extend('TableSort');
 
@@ -456,33 +450,33 @@ function questions_list() {
       $result->text,
       $result->category,
       format_date($result->date_created),
-      l("View", 'questions/view/nojs/view/'.$result->qid, array(
+      l("View", 'question/view/nojs/view/'.$result->qid, array(
         'attributes' => array(
           'class' => array(
-            'ctools-use-modal', 'ctools-modal-questions-modal')
+            'ctools-use-modal', 'ctools-modal-question-modal')
           ),
         )
       ),
-      l("Add Answer", 'questions/nojs/'.$result->qid, array(
+      l("Add Answer", 'question/nojs/'.$result->qid, array(
         'attributes' => array(
           'class' => array(
-            'ctools-use-modal', 'ctools-modal-questions-modal')
+            'ctools-use-modal', 'ctools-modal-question-modal')
           ),
         )
       )
     );
 
     if(isset($user->roles[3])){
-      array_push($rows[$result->qid], l('Delete', 'questions/'.$result->qid));
+      array_push($rows[$result->qid], l('Delete', 'question/'.$result->qid));
     }
   }
 
   $output = theme('table', array('header' => $header, 'rows' => $rows ));  
   $output .= theme('pager');
-  $output .= l("Add Question", 'questions/view/nojs/add/0', array(
+  $output .= l("Add Question", 'question/view/nojs/add/0', array(
         'attributes' => array(
           'class' => array(
-            'ctools-use-modal', 'ctools-modal-questions-modal')
+            'ctools-use-modal', 'ctools-modal-question-modal')
           ),
         )
       );
@@ -497,18 +491,18 @@ function questions_list() {
 /**
 * Ajax menu callback.
 */
-function questions_callback($ajax, $qid) {
+function question_callback($ajax, $qid) {
   if ($ajax) {
     ctools_include('ajax');
     ctools_include('modal');
 
     $form_state = array(
       'ajax' => TRUE,
-      'title' => t('MyModule Modal Form'),
+      'title' => t('Add Answer'),
       'qid' => $qid,
     );
 
-    $output = ctools_modal_form_wrapper('questions_add_answer_form', $form_state);
+    $output = ctools_modal_form_wrapper('question_add_answer_form', $form_state);
     if (!empty($form_state['ajax_commands'])) {
       $output = $form_state['ajax_commands'];
     }
@@ -517,7 +511,7 @@ function questions_callback($ajax, $qid) {
     drupal_exit();
   }
   else {
-    return drupal_get_form('questions_add_answer_form');
+    return drupal_get_form('question_add_answer_form');
   }
 }
 
@@ -526,7 +520,7 @@ function questions_callback($ajax, $qid) {
 /**
 * Question modal callback.
 */
-function questions_view_callback($ajax, $operation, $qid) {
+function question_view_callback($ajax, $operation, $qid) {
   if ($ajax) {
     ctools_include('ajax');
     ctools_include('modal');
@@ -538,7 +532,7 @@ function questions_view_callback($ajax, $operation, $qid) {
       'operation' => $operation // 0-add, 1-view, 2-edit, 3-delete
     );
 
-    $output = ctools_modal_form_wrapper('questions_view_form', $form_state);
+    $output = ctools_modal_form_wrapper('question_view_form', $form_state);
     if (!empty($form_state['ajax_commands'])) {
       $output = $form_state['ajax_commands'];
     }
@@ -546,12 +540,12 @@ function questions_view_callback($ajax, $operation, $qid) {
     drupal_exit();
   }
   else {
-    return drupal_get_form('questions_view_form');
+    return drupal_get_form('question_view_form');
   }
 }
 
 
-function questions_view_ajax_callback($form, &$form_state) {
+function question_view_ajax_callback($form, &$form_state) {
   $commands = array();
   $commands[] = ajax_command_html('#after_ajax_element_wrapper', render($form['ajax_example']));
   $commands[] = ajax_command_alert(t('ajax_command_alert() is working'));
